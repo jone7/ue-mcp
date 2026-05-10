@@ -2493,9 +2493,30 @@ TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJso
 			Unknown.Add(U);
 			continue;
 		}
-		Material->SetMaterialUsage(/*bNeedsRecompile*/ const_cast<bool&>(bEnabled), Usage);
-		Material->SetUsageByFlag(Usage, bEnabled);
-		Applied.Add(U);
+
+		if (!bEnabled)
+		{
+			// UE 5.7 no longer exposes a public setter for clearing usage flags.
+			if (!Material->GetUsageByFlag(Usage))
+			{
+				Applied.Add(U);
+			}
+			else
+			{
+				Unknown.Add(U);
+			}
+			continue;
+		}
+
+		bool bNeedsRecompile = false;
+		if (Material->SetMaterialUsage(bNeedsRecompile, Usage))
+		{
+			Applied.Add(U);
+		}
+		else
+		{
+			Unknown.Add(U);
+		}
 	}
 
 	Material->PreEditChange(nullptr);
@@ -2512,6 +2533,10 @@ TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJso
 	Result->SetArrayField(TEXT("applied"), AppliedJ);
 	if (Unknown.Num() > 0) Result->SetArrayField(TEXT("unknown"), UnknownJ);
 	Result->SetBoolField(TEXT("enabled"), bEnabled);
+	if (!bEnabled)
+	{
+		Result->SetStringField(TEXT("note"), TEXT("UE 5.7 does not expose a public API to clear material usage flags; already-disabled usages are treated as applied."));
+	}
 	return MCPResult(Result);
 }
 
