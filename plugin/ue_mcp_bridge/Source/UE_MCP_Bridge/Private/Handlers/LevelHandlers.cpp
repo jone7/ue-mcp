@@ -2632,6 +2632,32 @@ namespace
 		}
 		return nullptr;
 	}
+
+	static bool GetStreamingInitiallyLoaded(const ULevelStreaming* StreamingLevel)
+	{
+		return StreamingLevel && StreamingLevel->ShouldBeLoaded();
+	}
+
+	static bool GetStreamingInitiallyVisible(const ULevelStreaming* StreamingLevel)
+	{
+		return StreamingLevel && StreamingLevel->ShouldBeVisible();
+	}
+
+	static void SetStreamingInitiallyLoaded(ULevelStreaming* StreamingLevel, const bool bLoaded)
+	{
+		if (StreamingLevel)
+		{
+			StreamingLevel->SetShouldBeLoaded(bLoaded);
+		}
+	}
+
+	static void SetStreamingInitiallyVisible(ULevelStreaming* StreamingLevel, const bool bVisible)
+	{
+		if (StreamingLevel)
+		{
+			StreamingLevel->SetShouldBeVisible(bVisible);
+		}
+	}
 }
 
 TSharedPtr<FJsonValue> FLevelHandlers::ListStreamingSublevels(const TSharedPtr<FJsonObject>& Params)
@@ -2647,8 +2673,8 @@ TSharedPtr<FJsonValue> FLevelHandlers::ListStreamingSublevels(const TSharedPtr<F
 		O->SetStringField(TEXT("levelName"), FPaths::GetBaseFilename(PkgName));
 		O->SetStringField(TEXT("packageName"), PkgName);
 		O->SetStringField(TEXT("streamingClass"), SL->GetClass()->GetName());
-		O->SetBoolField(TEXT("initiallyLoaded"), SL->bInitiallyLoaded);
-		O->SetBoolField(TEXT("initiallyVisible"), SL->bInitiallyVisible);
+		O->SetBoolField(TEXT("initiallyLoaded"), GetStreamingInitiallyLoaded(SL));
+		O->SetBoolField(TEXT("initiallyVisible"), GetStreamingInitiallyVisible(SL));
 		O->SetBoolField(TEXT("loaded"), SL->IsLevelLoaded());
 		O->SetBoolField(TEXT("visible"), SL->GetShouldBeVisibleFlag());
 		const FTransform T = SL->LevelTransform;
@@ -2685,8 +2711,8 @@ TSharedPtr<FJsonValue> FLevelHandlers::AddStreamingSublevel(const TSharedPtr<FJs
 		return MCPError(FString::Printf(TEXT("Failed to add sub-level '%s'"), *LevelPath));
 	}
 
-	if (Params->HasField(TEXT("initiallyLoaded"))) SL->bInitiallyLoaded = OptionalBool(Params, TEXT("initiallyLoaded"), true);
-	if (Params->HasField(TEXT("initiallyVisible"))) SL->bInitiallyVisible = OptionalBool(Params, TEXT("initiallyVisible"), true);
+	if (Params->HasField(TEXT("initiallyLoaded"))) SetStreamingInitiallyLoaded(SL, OptionalBool(Params, TEXT("initiallyLoaded"), true));
+	if (Params->HasField(TEXT("initiallyVisible"))) SetStreamingInitiallyVisible(SL, OptionalBool(Params, TEXT("initiallyVisible"), true));
 
 	const TSharedPtr<FJsonObject>* LocObj = nullptr;
 	if (Params->TryGetObjectField(TEXT("location"), LocObj) && LocObj && (*LocObj).IsValid())
@@ -2741,8 +2767,8 @@ TSharedPtr<FJsonValue> FLevelHandlers::SetStreamingSublevelProperties(const TSha
 	if (!SL) return MCPError(FString::Printf(TEXT("Streaming sub-level not found: %s"), *Name));
 
 	bool bChanged = false;
-	if (Params->HasField(TEXT("initiallyLoaded"))) { SL->bInitiallyLoaded = OptionalBool(Params, TEXT("initiallyLoaded"), true); bChanged = true; }
-	if (Params->HasField(TEXT("initiallyVisible"))) { SL->bInitiallyVisible = OptionalBool(Params, TEXT("initiallyVisible"), true); bChanged = true; }
+	if (Params->HasField(TEXT("initiallyLoaded"))) { SetStreamingInitiallyLoaded(SL, OptionalBool(Params, TEXT("initiallyLoaded"), true)); bChanged = true; }
+	if (Params->HasField(TEXT("initiallyVisible"))) { SetStreamingInitiallyVisible(SL, OptionalBool(Params, TEXT("initiallyVisible"), true)); bChanged = true; }
 
 	const TSharedPtr<FJsonObject>* LocObj = nullptr;
 	if (Params->TryGetObjectField(TEXT("location"), LocObj) && LocObj && (*LocObj).IsValid())
@@ -2772,8 +2798,8 @@ TSharedPtr<FJsonValue> FLevelHandlers::SetStreamingSublevelProperties(const TSha
 	auto Result = MCPSuccess();
 	if (bChanged) MCPSetUpdated(Result); else MCPSetExisted(Result);
 	Result->SetStringField(TEXT("levelName"), Name);
-	Result->SetBoolField(TEXT("initiallyLoaded"), SL->bInitiallyLoaded);
-	Result->SetBoolField(TEXT("initiallyVisible"), SL->bInitiallyVisible);
+	Result->SetBoolField(TEXT("initiallyLoaded"), GetStreamingInitiallyLoaded(SL));
+	Result->SetBoolField(TEXT("initiallyVisible"), GetStreamingInitiallyVisible(SL));
 	if (bEditorVisibleSet) Result->SetBoolField(TEXT("editorVisible"), bEditorVisible);
 	return MCPResult(Result);
 }

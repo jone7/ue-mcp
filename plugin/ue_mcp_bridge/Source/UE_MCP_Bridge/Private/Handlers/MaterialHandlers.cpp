@@ -2459,6 +2459,50 @@ namespace
 		if (Hit(TEXT("geometrycollections")) || Hit(TEXT("geometry_collections"))) { OutUsage = MATUSAGE_GeometryCollections; return true; }
 		return false;
 	}
+
+	static bool ApplyMaterialUsage(UMaterial* Material, const EMaterialUsage Usage, const bool bEnabled, bool& bNeedsRecompile)
+	{
+		if (!Material)
+		{
+			return false;
+		}
+
+		if (bEnabled)
+		{
+			bool bLocalNeedsRecompile = false;
+			const bool bApplied = Material->SetMaterialUsage(bLocalNeedsRecompile, Usage);
+			bNeedsRecompile = bNeedsRecompile || bLocalNeedsRecompile;
+			return bApplied;
+		}
+
+		switch (Usage)
+		{
+		case MATUSAGE_SkeletalMesh: Material->bUsedWithSkeletalMesh = false; break;
+		case MATUSAGE_ParticleSprites: Material->bUsedWithParticleSprites = false; break;
+		case MATUSAGE_BeamTrails: Material->bUsedWithBeamTrails = false; break;
+		case MATUSAGE_MeshParticles: Material->bUsedWithMeshParticles = false; break;
+		case MATUSAGE_StaticLighting: Material->bUsedWithStaticLighting = false; break;
+		case MATUSAGE_MorphTargets: Material->bUsedWithMorphTargets = false; break;
+		case MATUSAGE_SplineMesh: Material->bUsedWithSplineMeshes = false; break;
+		case MATUSAGE_InstancedStaticMeshes: Material->bUsedWithInstancedStaticMeshes = false; break;
+		case MATUSAGE_NiagaraSprites: Material->bUsedWithNiagaraSprites = false; break;
+		case MATUSAGE_NiagaraRibbons: Material->bUsedWithNiagaraRibbons = false; break;
+		case MATUSAGE_NiagaraMeshParticles: Material->bUsedWithNiagaraMeshParticles = false; break;
+		case MATUSAGE_GeometryCache: Material->bUsedWithGeometryCache = false; break;
+		case MATUSAGE_Nanite: Material->bUsedWithNanite = false; break;
+		case MATUSAGE_Water: Material->bUsedWithWater = false; break;
+		case MATUSAGE_HairStrands: Material->bUsedWithHairStrands = false; break;
+		case MATUSAGE_LidarPointCloud: Material->bUsedWithLidarPointCloud = false; break;
+		case MATUSAGE_VirtualHeightfieldMesh: Material->bUsedWithVirtualHeightfieldMesh = false; break;
+		case MATUSAGE_Clothing: Material->bUsedWithClothing = false; break;
+		case MATUSAGE_GeometryCollections: Material->bUsedWithGeometryCollections = false; break;
+		default:
+			return false;
+		}
+
+		bNeedsRecompile = true;
+		return true;
+	}
 }
 
 TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJsonObject>& Params)
@@ -2485,6 +2529,7 @@ TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJso
 	const bool bEnabled = OptionalBool(Params, TEXT("enabled"), true);
 
 	TArray<FString> Applied, Unknown;
+	bool bNeedsRecompile = false;
 	for (const FString& U : UsagesIn)
 	{
 		EMaterialUsage Usage;
@@ -2493,9 +2538,14 @@ TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJso
 			Unknown.Add(U);
 			continue;
 		}
-		Material->SetMaterialUsage(/*bNeedsRecompile*/ const_cast<bool&>(bEnabled), Usage);
-		Material->SetUsageByFlag(Usage, bEnabled);
-		Applied.Add(U);
+		if (ApplyMaterialUsage(Material, Usage, bEnabled, bNeedsRecompile))
+		{
+			Applied.Add(U);
+		}
+		else
+		{
+			Unknown.Add(U);
+		}
 	}
 
 	Material->PreEditChange(nullptr);
@@ -2512,6 +2562,7 @@ TSharedPtr<FJsonValue> FMaterialHandlers::SetMaterialUsage(const TSharedPtr<FJso
 	Result->SetArrayField(TEXT("applied"), AppliedJ);
 	if (Unknown.Num() > 0) Result->SetArrayField(TEXT("unknown"), UnknownJ);
 	Result->SetBoolField(TEXT("enabled"), bEnabled);
+	Result->SetBoolField(TEXT("needsRecompile"), bNeedsRecompile);
 	return MCPResult(Result);
 }
 
