@@ -573,6 +573,7 @@ TSharedPtr<FJsonValue> FFoliageHandlers::CreateFoliageLayer(const TSharedPtr<FJs
 	return MCPResult(Result);
 }
 
+// 将传入的植被属性设置应用到已有植被类型，并返回逐项成功或失败结果。
 TSharedPtr<FJsonValue> FFoliageHandlers::SetFoliageTypeSettings(const TSharedPtr<FJsonObject>& Params)
 {
 	// Accept either foliageTypePath or foliageTypeName for lookup
@@ -631,7 +632,7 @@ TSharedPtr<FJsonValue> FFoliageHandlers::SetFoliageTypeSettings(const TSharedPtr
 
 	for (const auto& KV : (*SettingsObj)->Values)
 	{
-		FString PropertyName = KV.Key;
+		FString PropertyName(*KV.Key);
 		FString PropertyValue;
 
 		// Convert the JSON value to a string for ImportText
@@ -711,6 +712,7 @@ TSharedPtr<FJsonValue> FFoliageHandlers::SetFoliageTypeSettings(const TSharedPtr
 	return MCPResult(Result);
 }
 
+// 根据静态网格创建植被类型资产，应用可选属性设置并返回创建结果。
 TSharedPtr<FJsonValue> FFoliageHandlers::CreateFoliageType(const TSharedPtr<FJsonObject>& Params)
 {
 	FString MeshPath;
@@ -758,7 +760,7 @@ TSharedPtr<FJsonValue> FFoliageHandlers::CreateFoliageType(const TSharedPtr<FJso
 	{
 		for (const auto& KV : (*SettingsObj)->Values)
 		{
-			FString PropertyName = KV.Key;
+			FString PropertyName(*KV.Key);
 			FString PropertyValue;
 
 			if (KV.Value->Type == EJson::String)

@@ -1508,6 +1508,7 @@ TSharedPtr<FJsonValue> FLevelHandlers::SetComponentProperty(const TSharedPtr<FJs
 	return MCPResult(Result);
 }
 
+// 按属性名更新指定体积 Actor，返回修改字段并记录原值以支持回滚。
 TSharedPtr<FJsonValue> FLevelHandlers::SetVolumeProperties(const TSharedPtr<FJsonObject>& Params)
 {
 	FString ActorLabel;
@@ -1564,7 +1565,7 @@ TSharedPtr<FJsonValue> FLevelHandlers::SetVolumeProperties(const TSharedPtr<FJso
 
 			if (bApplied)
 			{
-				Changes.Add(MakeShared<FJsonValueString>(Pair.Key));
+				Changes.Add(MakeShared<FJsonValueString>(FString(*Pair.Key)));
 				PreviousValues->SetStringField(Pair.Key, PrevStr);
 			}
 		}
